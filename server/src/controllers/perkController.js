@@ -70,8 +70,50 @@ export async function createPerk(req, res, next) {
 // TODO
 // Update an existing perk by ID and validate only the fields that are being updated 
 export async function updatePerk(req, res, next) {
-  
+  try {
+    const allowedFields = ['title', 'description', 'category', 'discountPercent', 'merchant'];
+    const updates = {};
+
+    // Filter only allowed fields
+    for (const key of allowedFields) {
+      if (req.body[key] !== undefined) {
+        updates[key] = req.body[key];
+      }
+    }
+
+    // Optional: manually validate discountPercent and category
+    if (updates.discountPercent !== undefined) {
+      if (typeof updates.discountPercent !== 'number' || updates.discountPercent < 0 || updates.discountPercent > 100) {
+        return res.status(400).json({ message: 'discountPercent must be between 0 and 100' });
+      }
+    }
+
+    if (updates.category !== undefined) {
+      const validCategories = ['food', 'tech', 'travel', 'fitness', 'other'];
+      if (!validCategories.includes(updates.category)) {
+        return res.status(400).json({ message: `Invalid category: ${updates.category}` });
+      }
+    }
+
+    const updatedPerk = await Perk.findByIdAndUpdate(
+      req.params.id,
+      { $set: updates },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedPerk) {
+      return res.status(404).json({ message: 'Perk not found' });
+    }
+
+    res.json({ perk: updatedPerk });
+  } catch (err) {
+    next(err);
+  }
 }
+
+
+
+
 
 
 // Delete a perk by ID
